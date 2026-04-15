@@ -1,6 +1,7 @@
 import time
 import tkinter as tk
 from tkinter import ttk
+from scanning import start_scanning
 
 class ScannerApp:
     def __init__(self, root):
@@ -65,16 +66,8 @@ class ScannerApp:
         btns[0].focus()
 
 
-def start_scanning():
-    pass
-
 def scanning_options():
     pass
 
 def close_app():
     pass
-
-
-root = tk.Tk()
-app = ScannerApp(root)
-root.mainloop()
