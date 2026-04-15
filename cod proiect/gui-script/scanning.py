@@ -1,6 +1,8 @@
 import serial, time
 
 def start_scanning(comport, baudrate):
+    coords_list = []
+
 
     print(f"Conectare la {comport}")
     arduino_ser = serial.Serial(comport, baudrate, timeout=1)
@@ -23,8 +25,7 @@ def start_scanning(comport, baudrate):
                 break
 
             if ',' in data:
-                text_file.write(data)
-                text_file.flush()
+                coords_list.append(data)
                 
             print(data)
 
@@ -35,6 +36,9 @@ def start_scanning(comport, baudrate):
         if 'arduino_ser' in locals() and arduino_ser.is_open:
             arduino_ser.close()
             print("Port serial inchis")
-        if "text_file" in locals() and text_file:
-            text_file.close()
-            print("Fisier inchis")
+        # if "text_file" in locals() and text_file:
+        #     text_file.close()
+        #     print("Fisier inchis")
+
+    return coords_list
+
