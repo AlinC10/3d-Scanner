@@ -2,11 +2,11 @@
 #include "endstop.h"
 #include "switch.h"
 #include <Wire.h>
-#include "Adafruit_VL53L0X.h"
+#include "IR_Senzor.h"
 
-#define MEASUREMENTS_PER_ROTATION 64
 #define M8_THREAD_STEP_MM 1.25
-#define DISTANCE_TO_CENTER_MM 135.0
+#define DISTANCE_TO_CENTER_MM 130.0
+#define DISTANCE_TO_END_MM 230.0
 
 template<class T> inline Print& operator<<(Print& obj, T arg) {
   obj.print(arg);
@@ -21,12 +21,12 @@ Endstop bottomEndstop(BOTTOM_ENDSTOP_INPUT);
 
 Switch chargerSwitch(SWITCH_PIN);
 
-Adafruit_VL53L0X lidarSensor = Adafruit_VL53L0X();
-int currentZ = 0;
-
+IR_Senzor sensor(SENZOR_PIN);
+long currentZ = 0;
 
 void setup() {
   Serial.begin(115200);
+  // Serial << "Start";
 
   zMotor.pinSetup();
   turntableMotor.pinSetup();
@@ -36,13 +36,20 @@ void setup() {
 
   chargerSwitch.pinSetup();
 
-  while (!chargerSwitch.isOn() || !lidarSensor.begin()) {
+  while (!chargerSwitch.isOn()) {
+    // Serial << "Eroare setup 1";
     delay(5000);
   }
 
-  while (!bottomEndstop.reachRodLimit() && chargerSwitch.isOn()) {
+  while (!bottomEndstop.reachRodLimit()) {
     zMotor.fullStepBackward();
   }
+
+  zMotor.stop();
+  delay(1000);
+
+  for (int i = 0; i < zMotor.getRotationSteps(); i++)
+    zMotor.fullStepForward();
 
   zMotor.stop();
   delay(2000);
@@ -51,6 +58,7 @@ void setup() {
 int k = 0;
 
 void loop() {
+  bool hasScanned = false;
   // Serial << k++ << "\n";
   // add upper endpoint limit check to the if
   if (!chargerSwitch.isOn()) {
@@ -65,50 +73,58 @@ void loop() {
 
   for (int i = 0; i < MEASUREMENTS_PER_ROTATION; i++) {
 
-    for (int j = 0; j < stepsBetweenMeasurements / 8; j++)
+    for (int j = 0; j < stepsBetweenMeasurements / 8; j++) {
       turntableMotor.halfStepForward();
+    }
+
+    // read distance from the sensor
+    if (!chargerSwitch.isOn()) {
+      zMotor.stop();
+      turntableMotor.stop();
+
+      Serial << "end";
+      exit(1);
+    }
+
+    float const distance = sensor.getDistance();
 
     turntableMotor.stop();
-    // read distance from the sensor
-    VL53L0X_RangingMeasurementData_t measure;
-    lidarSensor.rangingTest(&measure, false);
 
-    // send data to laptop
-    // 4 = 'Out of Range'
-    if (measure.RangeStatus != 4) {
-      float currentAngle = (360.0 / MEASUREMENTS_PER_ROTATION) * i; // in degrees
-      currentAngle *= (PI / 180.0); // in radians
+    if (distance <= DISTANCE_TO_END_MM) {
+      float currentAngle = (360.0 / MEASUREMENTS_PER_ROTATION) * i;  // in degrees
+      currentAngle *= (PI / 180.0);                                  // in radians
 
-      const int distanceToObj = measure.RangeMilliMeter;
+      const float objRadius = DISTANCE_TO_CENTER_MM - distance;
 
-      if (distanceToObj < DISTANCE_TO_CENTER_MM) {
-        float const objRadius = DISTANCE_TO_CENTER_MM - distanceToObj;
+      // x, y, z
+      Serial << objRadius * cos(currentAngle)
+             << ", " << objRadius * sin(currentAngle) << ", " << (currentZ * 4.0 * M8_THREAD_STEP_MM) / zMotor.getRotationSteps() << "\n";
 
-        float const coord_X = objRadius * cos(currentAngle);
-        float const coord_Y = objRadius * sin(currentAngle);
-
-        float const coord_Z = (currentZ * 4.0 * M8_THREAD_STEP_MM) / zMotor.getRotationSteps(); // nush cu ce trb inlocuit
-
-        Serial << coord_X << ", " << coord_Y << ", " << coord_Z << "\n";
-      }
-
+      hasScanned = true;
     }
+  }
+  // Serial << "Ultimul for: \n" ;
+  for (int j = 0; j < zMotor.getRotationSteps() / 2; j++) {
+    // check upper endstop
+    // Serial << j << " ";
+    // if (upperEndstop.reachRodLimit()) {
+    //   zMotor.stop();
+    //   turntableMotor.stop();
+    //   exit(1);
+    // }
 
-    }
-    // Serial << "Ultimul for: \n" ;
-    for (int j = 0; j < zMotor.getRotationSteps() / 4; j++) {
-      // check upper endstop
-      // Serial << j << " "
-      // if (upperEndstop.reachRodLimit()) {
-      //   zMotor.stop();
-      //   turntableMotor.stop();
-      //   exit(1);
-      // }
-
-      zMotor.fullStepForward();
-      currentZ++;
+    zMotor.fullStepForward();
+    currentZ++;
   }
 
   zMotor.fullStepForward();
   zMotor.stop();
+
+  if (!hasScanned) {
+    zMotor.stop();
+    turntableMotor.stop();
+
+    Serial << "end";
+    exit(1);
+  }
 }
