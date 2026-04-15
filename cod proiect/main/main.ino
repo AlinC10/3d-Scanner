@@ -48,8 +48,8 @@ void setup() {
   zMotor.stop();
   delay(1000);
 
-  for (int i = 0; i < zMotor.getRotationSteps(); i++)
-    zMotor.fullStepForward();
+  // for (int i = 0; i < zMotor.getRotationSteps(); i++)
+  //   zMotor.fullStepForward();
 
   zMotor.stop();
   delay(2000);
@@ -85,6 +85,8 @@ void loop() {
       Serial << "end";
       exit(1);
     }
+  
+    delay(50);
 
     float const distance = sensor.getDistance();
 
