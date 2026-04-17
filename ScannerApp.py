@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import simpledialog, ttk
 import serial
 import threading
+import pymeshlab as ml
 
 class ScannerApp:
     def __init__(self, root):
@@ -159,8 +160,6 @@ class ScannerApp:
                 self.arduino_ser.close()
                 self.__show_msg("Port serial inchis", text_area)
 
-
-
             # enough points for an object
             if len(coords_list) > 50:
                 self.root.after(0, self.__save_data_ui, coords_list, text_area)
@@ -170,7 +169,12 @@ class ScannerApp:
     def __save_data_ui(self, coords_list, text_area):
         """UI for saving data"""
         # text file name input
-        text_file_name = self.__prompt() or './coords.xyz'
+        prompt = self.__prompt().split(".")[0]
+        if prompt:
+            text_file_name = f"./{prompt}.xyz"
+        else:
+            text_file_name = "../dist/coords.xyz"
+
         self.__show_msg(f"Numele fisierului este: {text_file_name}", text_area)
 
         text_file = open(text_file_name, "w")
@@ -182,13 +186,37 @@ class ScannerApp:
         btn_back = tk.Button(self.current_menu, text="Inapoi la meniul principal", command=self.main_menu)
         btn_back.pack(pady=10)
 
-        btn_mashlab = tk.Button(self.current_menu, text="Vizualizare obiect", command=self.show_object, bg="lightgreen")
+        btn_mashlab = tk.Button(self.current_menu, text="Vizualizare obiect", command=lambda event=None, text_file_name=text_file_name: self.show_object(text_file_name), bg="lightgreen")
         btn_mashlab.pack(pady=10)
 
 
 
-    def show_object(self):
-        pass
+    def show_object(self, text_file_name):
+        output_mesh = '.\\' + text_file_name[2:].split(".")[0] + '.obj'
+
+        try:
+            # create a MeshSet
+            ms = ml.MeshSet()
+
+            # load points
+            ms.load_new_mesh(text_file_name)
+
+            # calculate norm
+            ms.apply_filter('compute_normal_for_point_clouds', k=16)
+
+            # create object with Poisson algorithm
+            ms.apply_filter('generate_surface_reconstruction_screened_poisson', depth=8)
+
+            # save object
+            ms.save_current_mesh(output_mesh)
+
+            # open MeshLab to see the object
+            import os
+            os.startfile(output_mesh)
+
+        except Exception as e:
+            print(e)
+
 
     def __prompt(self):
         user_response = simpledialog.askstring("Nume fisier", "Cum se va numi fisierul?")

@@ -4,4 +4,5 @@ import tkinter as tk
 
 root = tk.Tk()
 app = ScannerApp(root)
-root.mainloop()
+app.show_object("./coords.xyz")
+# root.mainloop()
