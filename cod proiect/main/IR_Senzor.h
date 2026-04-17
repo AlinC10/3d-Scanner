@@ -1,5 +1,8 @@
+#pragma once
 #include "Arduino.h"
 #define SENZOR_PIN A0
+
+int readings = 10; // can be change by user through python script
 
 class IR_Senzor {
   private:
@@ -10,9 +13,9 @@ class IR_Senzor {
       this->input = input;
     }
 
+        // read distance from the sensor
     float getDistance() {
       long sum = 0;
-      const int readings = 10;
 
       for (int i = 0; i < readings; i++) {
         sum += analogRead(this->input);

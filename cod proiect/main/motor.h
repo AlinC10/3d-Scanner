@@ -13,7 +13,7 @@
 #define TURNTABLE_MOTOR_OUTPUT4 8
 #define ROTATION_STEPS_TURNTABLE_MOTOR 4096
 
-#define MEASUREMENTS_PER_ROTATION 64
+int MEASUREMENTS_PER_ROTATION = 64; // can be change by user through python script
 
 class Motor {
 private:
@@ -21,7 +21,7 @@ private:
   int output2;
   int output3;
   int output4;
-  int rotationSteps; // how much it rotates on a step
+  int rotationSteps; // how many steps it take on a rotation
   static const int DELAY = 2;
 
 public:
