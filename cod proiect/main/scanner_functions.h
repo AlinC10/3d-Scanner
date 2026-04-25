@@ -6,8 +6,8 @@ template<class T> inline Print& operator<<(Print& obj, T arg) {
   return obj;
 }
 
-bool shouldStop(bool& hasScanned, bool upperEndstopReached) {
-  if (!hasScanned || upperEndstopReached)
+bool shouldStop(bool boolCondition) {
+  if (boolCondition)
     return true;
 
   if (Serial.available() > 0) {
@@ -15,25 +15,26 @@ bool shouldStop(bool& hasScanned, bool upperEndstopReached) {
     pythonCommand.trim();
     pythonCommand.toLowerCase();
 
-    if (pythonCommand == "stop")
+    if (pythonCommand == "stop") {
+      Serial << "end";
       return true;
+    }
   }
 
   return false;
 }
 
-// TODO: change exit to return and modify scanning() function to return to the void loop()
 void turnOffScanner(Motor& zMotor, Motor& turntableMotor) {
   zMotor.stop();
   turntableMotor.stop();
 
-  Serial << "end";
-  exit(0);
+  return;
 }
 
-bool checkStoppingConditions(bool& hasScanned, bool upperEndstopReached, Motor& zMotor, Motor& turntableMotor) {
-  if (shouldStop(hasScanned, upperEndstopReached)) {
+bool checkStoppingConditions(bool boolCondition, Motor& zMotor, Motor& turntableMotor) {
+  if (shouldStop(boolCondition)) {
     turnOffScanner(zMotor, turntableMotor);
+    Serial << "end";
     return true;
   }
 
