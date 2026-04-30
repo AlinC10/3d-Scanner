@@ -1,10 +1,11 @@
 import time
 import tkinter as tk
-from tkinter import simpledialog, ttk
+from tkinter import simpledialog, ttk, messagebox
 import serial
 import threading
 import pymeshlab as ml
 from pathlib import Path
+from ComPort import get_com_port
 
 
 class ScannerApp:
@@ -18,7 +19,7 @@ class ScannerApp:
         self.root.geometry("1024x720")
         self.current_menu = None
 
-        self.com_port = 'COM13'
+        self.com_port = None
         self.baud_rate = 115200
 
         self.arduino_ser = None
@@ -51,7 +52,18 @@ class ScannerApp:
         """App's page with a \"Welcome!\" message."""
         self.create_frame("Bine ati venit!")
 
-        self.root.after(2000, self.main_menu)
+        self.com_port = get_com_port()
+
+        def retry_connection():
+            self.com_port = get_com_port()
+            if self.com_port is not None:
+                self.root.after(0, self.home_screen)
+
+        if self.com_port is None:
+            btn = tk.Button(self.current_menu, text="Cauta portul serial din nou", command=retry_connection)
+            btn.pack(pady=10)
+        else:
+            self.root.after(2000, self.main_menu)
 
     def main_menu(self):
         """Main menu page, used for navigation in the app.
@@ -65,7 +77,7 @@ class ScannerApp:
         try:
             self.open_serial()
         except serial.SerialException:
-            print(serial.SerialException)
+            messagebox.showerror("Eroare Port Serial", serial.SerialException)
 
         menu_options = [
             {
@@ -89,11 +101,7 @@ class ScannerApp:
             btn.bind("<Return>", lambda event, b=btn: b.invoke())
             btns.append(btn)
 
-        for i, btn in enumerate(btns):
-            prev = i - 1 if i > 0 else len(btns) - 1
-            next = i + 1 if i < len(btns) - 1 else 0
-            btn.bind("<Down>", lambda event, n=next: btns[n].focus())
-            btn.bind("<Up>", lambda event, p=prev: btns[p].focus())
+        ScannerApp.__bind_keyboard_arrows(btns)
 
         btns[0].focus()
 
@@ -227,6 +235,9 @@ class ScannerApp:
             # save object
             ms.save_current_mesh(output_mesh)
 
+            # save in .stl format
+            ms.save_current_mesh(output_mesh[:-3] + 'stl')
+
             # open MeshLab to see the object
             import os
             os.startfile(output_mesh)
@@ -347,6 +358,11 @@ class ScannerApp:
         btn_back.pack(pady=10)
         btns.append(btn_back)
 
+        ScannerApp.__bind_keyboard_arrows(btns)
+
+    @staticmethod
+    def __bind_keyboard_arrows(btns):
+        """Bind keyboard up and down arrows to GUI buttons."""
         for i, btn in enumerate(btns):
             prev = i - 1 if i > 0 else len(btns) - 1
             next = i + 1 if i < len(btns) - 1 else 0
